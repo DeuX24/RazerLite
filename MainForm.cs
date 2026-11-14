@@ -16,6 +16,7 @@ internal sealed class MainForm : Form
     private static readonly Color StatusWarn = Color.FromArgb(255, 193, 7);
 
     private readonly AppConfig _config;
+    private readonly bool _previewMode;
     private readonly float _scale;
     private readonly Font _fontBase;
     private readonly Font _fontTitle;
@@ -52,9 +53,10 @@ internal sealed class MainForm : Form
     private TrackBar _trkBrightness = null!;
     private Label _lblBrightnessVal = null!;
 
-    public MainForm(AppConfig config)
+    public MainForm(AppConfig config, bool previewMode = false)
     {
         _config = config;
+        _previewMode = previewMode;
         using (Graphics g = CreateGraphics())
         {
             _scale = Math.Max(1.0f, g.DpiX / 96.0f);
@@ -513,10 +515,17 @@ internal sealed class MainForm : Form
     private void RefreshDevices()
     {
         _devices = HidNative.EnumerateRazerDevices();
-        bool hasMouse = RazerProtocol.FindDeathAdder35G(_devices).Count > 0;
-        bool hasKbd = RazerProtocol.FindBlackWidow(_devices).Count > 0;
+        bool hasMouse = _previewMode || RazerProtocol.FindDeathAdder35G(_devices).Count > 0;
+        bool hasKbd = _previewMode || RazerProtocol.FindBlackWidow(_devices).Count > 0;
 
         ReflowVisibleCards(hasMouse, hasKbd);
+
+        if (_previewMode && _devices.Count == 0)
+        {
+            _lblDevices.Text = "Preview mode — showing all supported device cards.";
+            _lblDevices.ForeColor = AccentGreen;
+            return;
+        }
 
         if (_devices.Count == 0)
         {

@@ -45,9 +45,11 @@ internal static class Program
             return;
         }
 
+        bool previewMode = args.Any(a => string.Equals(a, "--preview", StringComparison.OrdinalIgnoreCase));
+
         SetProcessDPIAware();
         Application.EnableVisualStyles();
         Application.SetCompatibleTextRenderingDefault(false);
-        Application.Run(new MainForm(config));
+        Application.Run(new MainForm(config, previewMode));
     }
 }
