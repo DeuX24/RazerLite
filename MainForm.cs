@@ -14,10 +14,17 @@ internal sealed class MainForm : Form
     private static readonly Color TextPrimary = Color.FromArgb(240, 242, 245);
     private static readonly Color TextMuted = Color.FromArgb(154, 160, 172);
     private static readonly Color StatusWarn = Color.FromArgb(255, 193, 7);
-    private static readonly Font ToggleFontNormal = new("Segoe UI", 9f, FontStyle.Regular);
-    private static readonly Font ToggleFontSelected = new("Segoe UI", 9f, FontStyle.Bold);
 
     private readonly AppConfig _config;
+    private readonly float _scale;
+    private readonly Font _fontBase;
+    private readonly Font _fontTitle;
+    private readonly Font _fontSub;
+    private readonly Font _fontSection;
+    private readonly Font _fontToggleNormal;
+    private readonly Font _fontToggleSelected;
+    private readonly Font _fontActionBold;
+
     private List<HidDeviceInfo> _devices = [];
 
     private Label _lblDevices = null!;
@@ -37,101 +44,124 @@ internal sealed class MainForm : Form
     public MainForm(AppConfig config)
     {
         _config = config;
+        using (Graphics g = CreateGraphics())
+        {
+            _scale = Math.Max(1.0f, g.DpiX / 96.0f);
+        }
+
+        _fontBase = SFont(13f);
+        _fontTitle = SFont(22f, FontStyle.Bold);
+        _fontSub = SFont(12f);
+        _fontSection = SFont(14.5f, FontStyle.Bold);
+        _fontToggleNormal = SFont(12.5f);
+        _fontToggleSelected = SFont(12.5f, FontStyle.Bold);
+        _fontActionBold = SFont(13f, FontStyle.Bold);
+
         InitializeForm();
         BuildLayout();
         SyncUiFromConfig();
         RefreshDevices();
     }
 
+    private int S(int px) => (int)Math.Round(px * _scale);
+    private Point SP(int x, int y) => new(S(x), S(y));
+    private Size SS(int w, int h) => new(S(w), S(h));
+    private Font SFont(float px, FontStyle style = FontStyle.Regular) =>
+        new("Segoe UI", px * _scale, style, GraphicsUnit.Pixel);
+
     private void InitializeForm()
     {
         Text = "RazerLite";
-        ClientSize = new Size(640, 636);
+        AutoScaleMode = AutoScaleMode.None;
+        ClientSize = SS(680, 654);
         FormBorderStyle = FormBorderStyle.FixedSingle;
         MaximizeBox = false;
         StartPosition = FormStartPosition.CenterScreen;
         BackColor = BgWindow;
         ForeColor = TextPrimary;
-        Font = new Font("Segoe UI", 9.5f, FontStyle.Regular);
+        Font = _fontBase;
     }
 
     private void BuildLayout()
     {
-        int pad = 20;
-        int cardWidth = ClientSize.Width - (pad * 2);
+        const int pad = 20;
+        const int cardWidth = 640;
 
-        // Header
         var lblTitle = new Label
         {
             Text = "RazerLite",
-            Font = new Font("Segoe UI", 16f, FontStyle.Bold),
+            Font = _fontTitle,
             ForeColor = AccentGreen,
-            AutoSize = true,
-            Location = new Point(pad, 14)
+            AutoSize = false,
+            Size = SS(240, 30),
+            Location = SP(pad, 12),
+            TextAlign = ContentAlignment.MiddleLeft
         };
         Controls.Add(lblTitle);
 
         var lblSub = new Label
         {
             Text = "Lightweight hardware control  •  Zero background daemon",
-            Font = new Font("Segoe UI", 9f),
+            Font = _fontSub,
             ForeColor = TextMuted,
-            AutoSize = true,
-            Location = new Point(pad + 2, 44)
+            AutoSize = false,
+            Size = SS(440, 20),
+            Location = SP(pad + 2, 44),
+            TextAlign = ContentAlignment.MiddleLeft
         };
         Controls.Add(lblSub);
 
-        Button btnRefresh = CreateActionButton("Refresh Devices", new Point(ClientSize.Width - pad - 130, 20), new Size(130, 34), secondary: true);
+        Button btnRefresh = CreateActionButton("Refresh Devices", SP(680 - pad - 140, 18), SS(140, 36), secondary: true);
         btnRefresh.Click += (_, _) => RefreshDevices();
         Controls.Add(btnRefresh);
 
-        // Device detection banner
-        Panel deviceBanner = CreateCard(new Point(pad, 72), new Size(cardWidth, 44));
+        Panel deviceBanner = CreateCard(SP(pad, 74), SS(cardWidth, 44));
         _lblDevices = new Label
         {
             Text = "Scanning USB HID devices...",
+            Font = _fontSub,
             ForeColor = TextMuted,
             AutoSize = false,
-            Size = new Size(cardWidth - 24, 28),
-            Location = new Point(12, 11),
+            Size = SS(cardWidth - 24, 28),
+            Location = SP(12, 8),
             TextAlign = ContentAlignment.MiddleLeft
         };
         deviceBanner.Controls.Add(_lblDevices);
         Controls.Add(deviceBanner);
 
-        // Mouse card
-        Panel mouseCard = CreateCard(new Point(pad, 128), new Size(cardWidth, 186));
+        Panel mouseCard = CreateCard(SP(pad, 130), SS(cardWidth, 188));
         AddMouseControls(mouseCard);
         Controls.Add(mouseCard);
 
-        // Keyboard card
-        Panel kbdCard = CreateCard(new Point(pad, 326), new Size(cardWidth, 204));
+        Panel kbdCard = CreateCard(SP(pad, 330), SS(cardWidth, 204));
         AddKeyboardControls(kbdCard);
         Controls.Add(kbdCard);
 
-        // Footer bar
         _chkStartup = new CheckBox
         {
             Text = "Apply saved settings on Windows startup",
+            Font = _fontBase,
             ForeColor = TextPrimary,
-            AutoSize = true,
-            Location = new Point(pad, 546),
+            AutoSize = false,
+            Size = SS(380, 28),
+            Location = SP(pad, 548),
             Checked = AppConfig.IsStartupEnabled()
         };
         _chkStartup.CheckedChanged += (_, _) => ToggleStartup();
         Controls.Add(_chkStartup);
 
-        Button btnSaveAll = CreateActionButton("Save && Apply All", new Point(ClientSize.Width - pad - 165, 538), new Size(165, 36), secondary: false);
+        Button btnSaveAll = CreateActionButton("Save && Apply All", SP(680 - pad - 175, 544), SS(175, 36), secondary: false);
         btnSaveAll.Click += (_, _) => ApplyAll();
         Controls.Add(btnSaveAll);
 
         _lblStatus = new Label
         {
             Text = "Ready.",
+            Font = _fontSub,
             ForeColor = TextMuted,
             AutoSize = false,
-            Size = new Size(cardWidth, 48),
-            Location = new Point(pad, 580),
+            Size = SS(cardWidth, 52),
+            Location = SP(pad, 592),
             TextAlign = ContentAlignment.TopLeft
         };
         Controls.Add(_lblStatus);
@@ -141,12 +171,12 @@ internal sealed class MainForm : Form
     {
         AddSectionHeader(card, "DeathAdder Left-Hand Edition (3.5G  •  PID 0016)");
 
-        card.Controls.Add(CreateFieldLabel("DPI", new Point(16, 46)));
+        card.Controls.Add(CreateFieldLabel("DPI", SP(16, 46)));
         int[] dpis = [450, 900, 1800, 3500];
         for (int i = 0; i < dpis.Length; i++)
         {
             int dpi = dpis[i];
-            Button btn = CreateToggleButton($"{dpi}", new Point(120 + (i * 82), 40), new Size(76, 32));
+            Button btn = CreateToggleButton($"{dpi}", SP(128 + (i * 86), 41), SS(78, 34));
             btn.Click += (_, _) =>
             {
                 _config.MouseDpi = dpi;
@@ -156,12 +186,12 @@ internal sealed class MainForm : Form
             card.Controls.Add(btn);
         }
 
-        card.Controls.Add(CreateFieldLabel("Polling Rate", new Point(16, 88)));
+        card.Controls.Add(CreateFieldLabel("Polling Rate", SP(16, 90)));
         int[] polls = [125, 500, 1000];
         for (int i = 0; i < polls.Length; i++)
         {
             int poll = polls[i];
-            Button btn = CreateToggleButton($"{poll} Hz", new Point(120 + (i * 110), 82), new Size(102, 32));
+            Button btn = CreateToggleButton($"{poll} Hz", SP(128 + (i * 112), 85), SS(104, 34));
             btn.Click += (_, _) =>
             {
                 _config.MousePollRateHz = poll;
@@ -171,13 +201,15 @@ internal sealed class MainForm : Form
             card.Controls.Add(btn);
         }
 
-        card.Controls.Add(CreateFieldLabel("Mouse LEDs", new Point(16, 134)));
+        card.Controls.Add(CreateFieldLabel("Mouse LEDs", SP(16, 136)));
         _chkScrollLed = new CheckBox
         {
             Text = "Scroll Wheel",
+            Font = _fontBase,
             ForeColor = TextPrimary,
-            AutoSize = true,
-            Location = new Point(120, 134)
+            AutoSize = false,
+            Size = SS(122, 26),
+            Location = SP(128, 136)
         };
         _chkScrollLed.CheckedChanged += (_, _) => _config.MouseScrollLed = _chkScrollLed.Checked;
         card.Controls.Add(_chkScrollLed);
@@ -185,14 +217,16 @@ internal sealed class MainForm : Form
         _chkLogoLed = new CheckBox
         {
             Text = "Logo",
+            Font = _fontBase,
             ForeColor = TextPrimary,
-            AutoSize = true,
-            Location = new Point(240, 134)
+            AutoSize = false,
+            Size = SS(90, 26),
+            Location = SP(260, 136)
         };
         _chkLogoLed.CheckedChanged += (_, _) => _config.MouseLogoLed = _chkLogoLed.Checked;
         card.Controls.Add(_chkLogoLed);
 
-        Button btnApplyMouse = CreateActionButton("Apply Mouse", new Point(card.Width - 156, 132), new Size(140, 34), secondary: true);
+        Button btnApplyMouse = CreateActionButton("Apply Mouse", SP(484, 132), SS(140, 36), secondary: true);
         btnApplyMouse.Click += (_, _) => ApplyMouseOnly();
         card.Controls.Add(btnApplyMouse);
     }
@@ -201,7 +235,7 @@ internal sealed class MainForm : Form
     {
         AddSectionHeader(card, "BlackWidow Chroma V2 (PID 0221)");
 
-        card.Controls.Add(CreateFieldLabel("Effect", new Point(16, 46)));
+        card.Controls.Add(CreateFieldLabel("Effect", SP(16, 46)));
         (KeyboardEffect Effect, string Label)[] effects =
         [
             (KeyboardEffect.Static, "Static"),
@@ -215,7 +249,7 @@ internal sealed class MainForm : Form
         for (int i = 0; i < effects.Length; i++)
         {
             KeyboardEffect eff = effects[i].Effect;
-            Button btn = CreateToggleButton(effects[i].Label, new Point(120 + (i * 77), 40), new Size(71, 32));
+            Button btn = CreateToggleButton(effects[i].Label, SP(128 + (i * 83), 41), SS(77, 34));
             btn.Click += (_, _) =>
             {
                 _config.KeyboardEffect = eff;
@@ -225,7 +259,7 @@ internal sealed class MainForm : Form
             card.Controls.Add(btn);
         }
 
-        card.Controls.Add(CreateFieldLabel("Color", new Point(16, 92)));
+        card.Controls.Add(CreateFieldLabel("Color", SP(16, 92)));
         Color[] swatches =
         [
             Color.FromArgb(0, 230, 91),   // Razer Green
@@ -243,8 +277,8 @@ internal sealed class MainForm : Form
             {
                 BackColor = c,
                 FlatStyle = FlatStyle.Flat,
-                Size = new Size(28, 28),
-                Location = new Point(120 + (i * 34), 86),
+                Size = SS(28, 28),
+                Location = SP(128 + (i * 36), 88),
                 Cursor = Cursors.Hand
             };
             swatch.FlatAppearance.BorderSize = 1;
@@ -261,25 +295,25 @@ internal sealed class MainForm : Form
 
         _colorPreview = new Panel
         {
-            Size = new Size(28, 28),
-            Location = new Point(340, 86),
+            Size = SS(28, 28),
+            Location = SP(354, 88),
             BorderStyle = BorderStyle.FixedSingle
         };
         card.Controls.Add(_colorPreview);
 
-        Button btnPickColor = CreateActionButton("Custom...", new Point(376, 85), new Size(92, 30), secondary: true);
+        Button btnPickColor = CreateActionButton("Custom...", SP(392, 86), SS(96, 32), secondary: true);
         btnPickColor.Click += (_, _) => PickCustomColor();
         card.Controls.Add(btnPickColor);
 
-        card.Controls.Add(CreateFieldLabel("Brightness", new Point(16, 140)));
+        card.Controls.Add(CreateFieldLabel("Brightness", SP(16, 142)));
         _trkBrightness = new TrackBar
         {
             Minimum = 0,
             Maximum = 100,
             TickFrequency = 25,
             AutoSize = false,
-            Size = new Size(260, 34),
-            Location = new Point(116, 132),
+            Size = SS(260, 36),
+            Location = SP(124, 136),
             BackColor = BgCard
         };
         _trkBrightness.ValueChanged += (_, _) =>
@@ -292,13 +326,16 @@ internal sealed class MainForm : Form
         _lblBrightnessVal = new Label
         {
             Text = "80%",
+            Font = _fontBase,
             ForeColor = TextPrimary,
-            AutoSize = true,
-            Location = new Point(384, 140)
+            AutoSize = false,
+            Size = SS(54, 24),
+            Location = SP(392, 142),
+            TextAlign = ContentAlignment.MiddleLeft
         };
         card.Controls.Add(_lblBrightnessVal);
 
-        Button btnApplyKbd = CreateActionButton("Apply Keyboard", new Point(card.Width - 156, 146), new Size(140, 34), secondary: true);
+        Button btnApplyKbd = CreateActionButton("Apply Keyboard", SP(484, 148), SS(140, 36), secondary: true);
         btnApplyKbd.Click += (_, _) => ApplyKeyboardOnly();
         card.Controls.Add(btnApplyKbd);
     }
@@ -452,32 +489,38 @@ internal sealed class MainForm : Form
         return panel;
     }
 
-    private static void AddSectionHeader(Panel card, string title)
+    private void AddSectionHeader(Panel card, string title)
     {
         card.Controls.Add(new Label
         {
             Text = title,
-            Font = new Font("Segoe UI", 10.5f, FontStyle.Bold),
+            Font = _fontSection,
             ForeColor = TextPrimary,
-            AutoSize = true,
-            Location = new Point(16, 12)
+            AutoSize = false,
+            Size = SS(608, 24),
+            Location = SP(16, 12),
+            TextAlign = ContentAlignment.MiddleLeft
         });
     }
 
-    private static Label CreateFieldLabel(string text, Point location) =>
+    private Label CreateFieldLabel(string text, Point location) =>
         new()
         {
             Text = text,
+            Font = _fontBase,
             ForeColor = TextMuted,
-            AutoSize = true,
-            Location = location
+            AutoSize = false,
+            Size = SS(104, 24),
+            Location = location,
+            TextAlign = ContentAlignment.MiddleLeft
         };
 
-    private static Button CreateToggleButton(string text, Point location, Size size)
+    private Button CreateToggleButton(string text, Point location, Size size)
     {
         var btn = new Button
         {
             Text = text,
+            Font = _fontToggleNormal,
             Location = location,
             Size = size,
             FlatStyle = FlatStyle.Flat,
@@ -487,15 +530,15 @@ internal sealed class MainForm : Form
         return btn;
     }
 
-    private static void StyleToggleButton(Button btn, bool selected)
+    private void StyleToggleButton(Button btn, bool selected)
     {
         btn.BackColor = selected ? AccentGreen : BgButton;
         btn.ForeColor = selected ? Color.Black : TextPrimary;
-        btn.Font = selected ? ToggleFontSelected : ToggleFontNormal;
+        btn.Font = selected ? _fontToggleSelected : _fontToggleNormal;
         btn.FlatAppearance.BorderColor = selected ? AccentGreen : BorderSubtle;
     }
 
-    private static Button CreateActionButton(string text, Point location, Size size, bool secondary)
+    private Button CreateActionButton(string text, Point location, Size size, bool secondary)
     {
         var btn = new Button
         {
@@ -505,7 +548,7 @@ internal sealed class MainForm : Form
             FlatStyle = FlatStyle.Flat,
             BackColor = secondary ? BgButton : AccentGreen,
             ForeColor = secondary ? TextPrimary : Color.Black,
-            Font = new Font("Segoe UI", 9.5f, secondary ? FontStyle.Regular : FontStyle.Bold),
+            Font = secondary ? _fontBase : _fontActionBold,
             Cursor = Cursors.Hand
         };
         btn.FlatAppearance.BorderSize = 1;
