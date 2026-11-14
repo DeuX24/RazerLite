@@ -1,0 +1,50 @@
+name: Build RazerLite
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Build RazerLite.exe (Release)
+        run: dotnet build RazerLite.csproj -c Release
+
+      - name: Verify single-file output
+        shell: pwsh
+        run: |
+          if (-not (Test-Path 'bin\Release\net48\RazerLite.exe')) {
+            throw 'Expected bin\Release\net48\RazerLite.exe was not produced.'
+          }
+          Get-Item 'bin\Release\net48\RazerLite.exe'
+
+      - name: Upload RazerLite.exe artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: RazerLite-win-exe
+          path: bin/Release/net48/RazerLite.exe
+          if-no-files-found: error
+
+      - name: Publish GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: bin/Release/net48/RazerLite.exe
+          generate_release_notes: true
