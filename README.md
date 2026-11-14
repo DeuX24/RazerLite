@@ -33,6 +33,7 @@ Output executable:
 bin\Release\net48\RazerLite.exe
 ```
 
-## Technical Notes
+## Technical Notes & Handoff
 
-See [DOCUMENTATION.md](DOCUMENTATION.md) for the USB HID protocol specifications, Windows `hidusb.sys` driver notes for the DeathAdder 3.5G, and how to stop Windows Update from prompting to install Razer Synapse.
+- See [DOCUMENTATION.md](DOCUMENTATION.md) for the USB HID protocol specifications, Windows `hidusb.sys` driver notes for the DeathAdder 3.5G, and how to stop Windows Update from prompting to install Razer Synapse.
+- See [AGENTS.md](AGENTS.md) for architecture details, build constraints, CI/CD release steps, and the on-device hardware testing checklist.

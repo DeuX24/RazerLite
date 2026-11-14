@@ -98,7 +98,7 @@ For the best combination of **end-user stability**, **single `.exe` distribution
   * **Mouse section:** DPI selector (`450` / `900` / `1800` / `3500`), Polling Rate selector defaulting to `1000 Hz` (`1000` / `500` / `125 Hz`), and optional Scroll Wheel / Logo LED checkboxes.
   * **Keyboard section:** Basic lighting mode (`Static`, `Spectrum`, `Wave`, `Breathing`, `Off`) and brightness slider.
   * **Device status banner:** Lists detected `VID_1532` devices and immediately reports if Windows' HID driver blocks the 3.5G legacy control packet.
-* **Optional Startup Apply:** Saves selections to `%AppData%\RazerLite\config.json` (or `.ini`/JSON) and toggles a `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` entry so saved settings (such as `1000 Hz` + preferred DPI) apply automatically on login and exit immediately—with no terminal or manual CLI flags ever exposed to the user.
+* **Optional Startup Apply:** Saves selections to `%AppData%\RazerLite\config.ini` and toggles a `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` entry (`RazerLite`) so saved settings (such as `1000 Hz` + preferred DPI) apply automatically on login and exit immediately—with no terminal or manual CLI flags ever exposed to the user.
 
 ### GitHub Actions CI/CD Pipeline Design
 * **Runner & Triggers:** Runs on `windows-latest` on `push`, manual `workflow_dispatch`, and version tags (`v*`).
