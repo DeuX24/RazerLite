@@ -5,11 +5,15 @@ namespace RazerLite;
 
 internal sealed class AppConfig
 {
+    public bool MouseEnabled { get; set; } = true;
+    public bool MouseApplyOnStartup { get; set; } = true;
     public int MouseDpi { get; set; } = 1800;
     public int MousePollRateHz { get; set; } = 1000;
     public bool MouseScrollLed { get; set; } = true;
     public bool MouseLogoLed { get; set; } = true;
 
+    public bool KeyboardEnabled { get; set; } = true;
+    public bool KeyboardApplyOnStartup { get; set; } = false;
     public KeyboardEffect KeyboardEffect { get; set; } = KeyboardEffect.Static;
     public int KeyboardBrightness { get; set; } = 80;
     public byte ColorR { get; set; } = 0;
@@ -47,6 +51,12 @@ internal sealed class AppConfig
 
                 switch (key)
                 {
+                    case nameof(MouseEnabled) when bool.TryParse(val, out bool mEn):
+                        cfg.MouseEnabled = mEn;
+                        break;
+                    case nameof(MouseApplyOnStartup) when bool.TryParse(val, out bool mStart):
+                        cfg.MouseApplyOnStartup = mStart;
+                        break;
                     case nameof(MouseDpi) when int.TryParse(val, out int dpi):
                         cfg.MouseDpi = dpi;
                         break;
@@ -58,6 +68,12 @@ internal sealed class AppConfig
                         break;
                     case nameof(MouseLogoLed) when bool.TryParse(val, out bool logoLed):
                         cfg.MouseLogoLed = logoLed;
+                        break;
+                    case nameof(KeyboardEnabled) when bool.TryParse(val, out bool kEn):
+                        cfg.KeyboardEnabled = kEn;
+                        break;
+                    case nameof(KeyboardApplyOnStartup) when bool.TryParse(val, out bool kStart):
+                        cfg.KeyboardApplyOnStartup = kStart;
                         break;
                     case nameof(KeyboardEffect) when Enum.TryParse(val, out KeyboardEffect effect):
                         cfg.KeyboardEffect = effect;
@@ -90,10 +106,14 @@ internal sealed class AppConfig
         Directory.CreateDirectory(ConfigDir);
         string[] lines =
         [
+            $"MouseEnabled={MouseEnabled}",
+            $"MouseApplyOnStartup={MouseApplyOnStartup}",
             $"MouseDpi={MouseDpi}",
             $"MousePollRateHz={MousePollRateHz}",
             $"MouseScrollLed={MouseScrollLed}",
             $"MouseLogoLed={MouseLogoLed}",
+            $"KeyboardEnabled={KeyboardEnabled}",
+            $"KeyboardApplyOnStartup={KeyboardApplyOnStartup}",
             $"KeyboardEffect={KeyboardEffect}",
             $"KeyboardBrightness={KeyboardBrightness}",
             $"ColorR={ColorR}",
@@ -103,17 +123,10 @@ internal sealed class AppConfig
         File.WriteAllLines(ConfigPath, lines);
     }
 
-    public static bool IsStartupEnabled()
+    public void SyncStartupRegistry()
     {
-        try
-        {
-            using RegistryKey? key = Registry.CurrentUser.OpenSubKey(RunKeyPath, writable: false);
-            return key?.GetValue(RunValueName) is string val && !string.IsNullOrWhiteSpace(val);
-        }
-        catch
-        {
-            return false;
-        }
+        bool anyStartup = (MouseEnabled && MouseApplyOnStartup) || (KeyboardEnabled && KeyboardApplyOnStartup);
+        SetStartupEnabled(anyStartup);
     }
 
     public static void SetStartupEnabled(bool enabled)

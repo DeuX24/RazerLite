@@ -15,21 +15,33 @@ internal static class Program
 
         if (args.Any(a => string.Equals(a, "--startup-apply", StringComparison.OrdinalIgnoreCase)))
         {
-            List<HidDeviceInfo> devices = HidNative.EnumerateRazerDevices();
-            RazerProtocol.ApplyDeathAdder35G(
-                devices,
-                config.MouseDpi,
-                config.MousePollRateHz,
-                config.MouseScrollLed,
-                config.MouseLogoLed);
+            bool applyMouse = config.MouseEnabled && config.MouseApplyOnStartup;
+            bool applyKeyboard = config.KeyboardEnabled && config.KeyboardApplyOnStartup;
+            if (!applyMouse && !applyKeyboard)
+                return;
 
-            RazerProtocol.ApplyBlackWidow(
-                devices,
-                config.KeyboardEffect,
-                config.KeyboardBrightness,
-                config.ColorR,
-                config.ColorG,
-                config.ColorB);
+            List<HidDeviceInfo> devices = HidNative.EnumerateRazerDevices();
+
+            if (applyMouse)
+            {
+                RazerProtocol.ApplyDeathAdder35G(
+                    devices,
+                    config.MouseDpi,
+                    config.MousePollRateHz,
+                    config.MouseScrollLed,
+                    config.MouseLogoLed);
+            }
+
+            if (applyKeyboard)
+            {
+                RazerProtocol.ApplyBlackWidow(
+                    devices,
+                    config.KeyboardEffect,
+                    config.KeyboardBrightness,
+                    config.ColorR,
+                    config.ColorG,
+                    config.ColorB);
+            }
             return;
         }
 
